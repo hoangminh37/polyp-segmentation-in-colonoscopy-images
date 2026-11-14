@@ -1,0 +1,2 @@
+model: unet
+encoder: resnet34

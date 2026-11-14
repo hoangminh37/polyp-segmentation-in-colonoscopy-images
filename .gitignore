@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# data and artefacts are reproducible from the scripts
+data/raw/
+data/cache/
+runs/
+checkpoints/
+wandb/
+app/examples/

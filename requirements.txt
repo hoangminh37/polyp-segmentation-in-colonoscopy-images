@@ -1,0 +1,12 @@
+torch>=2.4
+torchvision>=0.19
+segmentation-models-pytorch>=0.5
+albumentations>=2.0
+opencv-python-headless>=4.9
+numpy>=1.26
+pandas>=2.0
+matplotlib>=3.8
+pyyaml>=6.0
+gradio>=5.0
+# optional experiment tracking (python -m src.train ... --wandb)
+# wandb

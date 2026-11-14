@@ -1,0 +1,2 @@
+model: deeplabv3plus
+encoder: resnet34

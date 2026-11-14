@@ -1,0 +1,4 @@
+# MiT-B2 (~25M params) is the size-matched counterpart of ResNet-34.
+# Use --encoder mit_b0 for the lightweight 3.7M variant.
+model: segformer
+encoder: mit_b2

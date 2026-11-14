@@ -1,0 +1,2 @@
+run,dataset,model,encoder,loss,optimizer,scheduler,seed,dice,iou,precision,recall,params_M,cpu_ms
+unet_resnet34_bce_dice_adamw_cosine_s42,kvasir_test,unet,resnet34,bce_dice,adamw,cosine,42,0.9054104925692081,0.8500297058373689,0.9053370912373065,0.9405353662371635,24.436369,56.008500000461936
