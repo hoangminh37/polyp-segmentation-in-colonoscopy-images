@@ -1,6 +1,9 @@
-"""Model factory for the three compared architectures."""
+"""Model factory: the from-scratch baseline and the three library architectures."""
 import segmentation_models_pytorch as smp
 import torch
+
+from .config import with_defaults
+from .custom_unet import CustomUNet
 
 ARCHS = {
     "unet": smp.Unet,
@@ -9,8 +12,17 @@ ARCHS = {
 }
 
 
-def build_model(model, encoder, encoder_weights="imagenet"):
-    return ARCHS[model](encoder_name=encoder, encoder_weights=encoder_weights, in_channels=3, classes=1)
+def build_model(cfg, pretrained=True):
+    """Build the model described by a run config. pretrained=False skips downloading weights
+    (used when a checkpoint is loaded right after)."""
+    cfg = with_defaults(cfg)
+    if cfg["model"] == "custom_unet":
+        return CustomUNet(cfg["base_channels"], cfg["skip"], cfg["upsample"], cfg["norm"],
+                          cfg["block"], cfg["dropout"])
+    weights = cfg["encoder_weights"]
+    if not pretrained or weights in (None, "", "none"):
+        weights = None
+    return ARCHS[cfg["model"]](encoder_name=cfg["encoder"], encoder_weights=weights, in_channels=3, classes=1)
 
 
 def get_device(name="auto"):
@@ -26,8 +38,8 @@ def get_device(name="auto"):
 def load_checkpoint(path, device="cpu"):
     """Rebuild a trained model from a checkpoint. Returns (model, cfg)."""
     ckpt = torch.load(path, map_location="cpu", weights_only=True)
-    cfg = ckpt["cfg"]
-    model = build_model(cfg["model"], cfg["encoder"], encoder_weights=None)
+    cfg = with_defaults(ckpt["cfg"])
+    model = build_model(cfg, pretrained=False)
     model.load_state_dict(ckpt["model"])
     return model.to(device).eval(), cfg
 

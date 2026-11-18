@@ -109,9 +109,11 @@ def main():
     ap.add_argument("--name", help="dataset label used in output file names")
     ap.add_argument("--threshold", type=float, default=0.5)
     ap.add_argument("--device", default="auto")
+    ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
     summary = evaluate_run(args.run, args.data_dir, args.name, get_device(args.device), args.threshold)
-    print(json.dumps({k: v for k, v in summary.items() if k != "cfg"}, indent=2))
+    if not args.quiet:
+        print(json.dumps({k: v for k, v in summary.items() if k != "cfg"}, indent=2))
 
 
 if __name__ == "__main__":

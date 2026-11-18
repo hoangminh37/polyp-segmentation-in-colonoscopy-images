@@ -10,3 +10,8 @@ runs/
 checkpoints/
 wandb/
 app/examples/
+runs_archive/
+mlruns/
+logs/
+.pytest_cache/
+.ruff_cache/

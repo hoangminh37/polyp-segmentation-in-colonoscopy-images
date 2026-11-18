@@ -1,0 +1,5 @@
+# U-Net written from scratch (src/custom_unet.py), trained without pretrained weights.
+model: custom_unet
+encoder: none
+encoder_weights: none
+base_channels: 32

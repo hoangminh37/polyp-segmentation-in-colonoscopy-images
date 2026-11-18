@@ -40,6 +40,7 @@ def main():
     ap.add_argument("--pick", choices=["random", "worst", "best"], default="random")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--name", help="comparison name; required when comparing several runs")
+    ap.add_argument("--reports-dir", default="reports")
     args = ap.parse_args()
 
     device = get_device()
@@ -53,7 +54,7 @@ def main():
         pred, dice = predict(model, dataset, device)
         preds.append(pred)
         dices.append(dice)
-        labels.append(f"{cfg['model']}\n{cfg['encoder']}")
+        labels.append(Path(run).name.replace("_", " "))
 
     order = np.argsort(dices[0])
     if args.pick == "worst":
@@ -78,7 +79,7 @@ def main():
                 ax.text(4, 20, f"Dice {dices[c - 2][i]:.2f}", color="yellow", fontsize=8)
     fig.tight_layout()
     dataset_label = Path(args.data_dir).name.lower() if args.data_dir else f"{cfg['dataset_name']}_test"
-    out = output_path(args.runs, args.name, f"qualitative_{dataset_label}_{args.pick}.png")
+    out = output_path(args.runs, args.name, f"qualitative_{dataset_label}_{args.pick}.png", args.reports_dir)
     fig.savefig(out, dpi=150)
     print(f"Saved {out}")
 

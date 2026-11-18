@@ -1,0 +1,5 @@
+custom_unet_s42
+unet_r34_scratch_s42
+unet_r34_s42
+deeplabv3plus_r34_s42
+segformer_b2_s42
