@@ -1,7 +1,15 @@
+# Keep the build context small: the image needs src/, app/ and the release in checkpoints/.
 .venv
 .git
+.github
 data
 runs
-wandb
+runs_archive
 reports
+mlruns
+logs
+wandb
+tests
 **/__pycache__
+**/*.pyc
+.DS_Store

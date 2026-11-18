@@ -1,0 +1,55 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-*.txt
+      - name: Install (CPU torch)
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch==2.15.0 torchvision==0.29.2
+          pip install -r requirements-serve.txt -r requirements-dev.txt
+      - name: Lint
+        run: ruff check .
+      - name: Unit and API tests
+        run: pytest
+
+  docker:
+    # Builds the real serving image around a tiny random-weight release (trained weights are not in git)
+    # and checks that the container starts, reports healthy and answers a prediction.
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dummy release
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch==2.15.0 torchvision==0.29.2
+          pip install segmentation-models-pytorch==0.6.0 albumentations==2.0.8 opencv-python-headless==5.0.0.93 pyyaml
+          python scripts/package_models.py --dummy --out checkpoints
+      - name: Build image
+        run: docker build -t polyp-seg:ci .
+      - name: Smoke test
+        run: |
+          docker run -d --name app -p 7860:7860 polyp-seg:ci
+          for i in $(seq 1 60); do curl -sf localhost:7860/health && break; sleep 2; done
+          curl -sf localhost:7860/health
+          python -c "import numpy as np, cv2; cv2.imwrite('frame.png', np.random.randint(0, 255, (240, 320, 3), np.uint8))"
+          curl -sf -F "file=@frame.png" "localhost:7860/api/v1/predict?model=ensemble" | tee response.json
+          grep -q '"model":"ensemble"' response.json
+          curl -sf localhost:7860/metrics | grep -q polyp_requests_total
+      - name: Container logs
+        if: always()
+        run: docker logs app || true

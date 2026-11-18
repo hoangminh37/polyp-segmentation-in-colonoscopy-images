@@ -4,10 +4,10 @@
     python -m src.train --config configs/unet_resnet34.yaml --loss focal --seed 1
     python -m src.train --config configs/unet_resnet34.yaml --optimizer sgd --lr 0.01
 
-Every key in DEFAULTS can be set in the YAML config and overridden on the command line.
+Every key in src/config.py DEFAULTS can be set in the YAML config and overridden on the command line
+(booleans as --skip / --no-skip).
 Outputs go to runs/<run name>/: best.pt, log.csv, curves.png, config.yaml, metrics_kvasir_test.json
 """
-import argparse
 import csv
 import os
 import random
@@ -23,54 +23,11 @@ from torch.utils.data import DataLoader
 
 from .data import PolypDataset, load_arrays, read_split
 from .evaluate import evaluate_loader, evaluate_run
-from .losses import LOSSES
+from .config import parse_config
+from .losses import build_loss
 from .models import build_model, count_params, get_device
 from .plots import plot_curves
-
-DEFAULTS = {
-    "name": "",  # run name; auto-generated when empty
-    "model": "unet",  # unet | deeplabv3plus | segformer
-    "encoder": "resnet34",
-    "encoder_weights": "imagenet",
-    "data_dir": "data/raw/Kvasir-SEG",
-    "dataset_name": "kvasir",
-    "split_dir": "data/splits",
-    "img_size": 352,
-    "batch_size": 16,
-    "epochs": 60,
-    "optimizer": "adamw",  # adamw | sgd
-    "lr": 1e-4,
-    "weight_decay": 1e-2,
-    "scheduler": "cosine",  # cosine | step | plateau | none
-    "loss": "bce_dice",  # bce | dice | focal | bce_dice
-    "seed": 42,
-    "device": "auto",
-    "out_dir": "runs",
-    "wandb": False,
-}
-
-
-def parse_config():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--config")
-    for key, default in DEFAULTS.items():
-        if isinstance(default, bool):
-            ap.add_argument(f"--{key}", action="store_true", default=None)
-        else:
-            ap.add_argument(f"--{key}", type=type(default), default=None)
-    args = vars(ap.parse_args())
-    cfg = dict(DEFAULTS)
-    if args["config"]:
-        cfg.update(yaml.safe_load(Path(args["config"]).read_text()) or {})
-    cfg.update({k: v for k, v in args.items() if k in DEFAULTS and v is not None})
-    unknown = set(cfg) - set(DEFAULTS)
-    if unknown:
-        raise KeyError(f"Unknown config keys: {sorted(unknown)}")
-    cfg["lr"], cfg["weight_decay"] = float(cfg["lr"]), float(cfg["weight_decay"])
-    if not cfg["name"]:
-        cfg["name"] = "{model}_{encoder}_{loss}_{optimizer}_{scheduler}_s{seed}".format(**cfg)
-    return cfg
-
+from .tracking import Tracker
 
 def seed_everything(seed):
     random.seed(seed)
@@ -79,8 +36,10 @@ def seed_everything(seed):
 
 
 def build_optimizer(cfg, model):
-    if cfg["optimizer"] == "adamw":
+    if cfg["optimizer"] == "adamw":  # decoupled weight decay
         return torch.optim.AdamW(model.parameters(), lr=cfg["lr"], weight_decay=cfg["weight_decay"])
+    if cfg["optimizer"] == "adam":  # weight decay added to the gradient (classic L2)
+        return torch.optim.Adam(model.parameters(), lr=cfg["lr"], weight_decay=cfg["weight_decay"])
     if cfg["optimizer"] == "sgd":
         return torch.optim.SGD(model.parameters(), lr=cfg["lr"], momentum=0.9,
                                weight_decay=cfg["weight_decay"], nesterov=True)
@@ -88,16 +47,26 @@ def build_optimizer(cfg, model):
 
 
 def build_scheduler(cfg, optimizer):
-    name, epochs = cfg["scheduler"], cfg["epochs"]
-    if name == "cosine":
-        return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=cfg["lr"] * 0.01)
-    if name == "step":
-        return torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(1, epochs // 3), gamma=0.1)
+    """Per-epoch LR schedule, optionally preceded by a linear warm-up (L5)."""
+    name, warmup = cfg["scheduler"], cfg["warmup_epochs"]
+    epochs = cfg["epochs"] - warmup
+    sched = torch.optim.lr_scheduler
     if name == "plateau":
-        return torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=5)
-    if name == "none":
-        return None
-    raise ValueError(name)
+        if warmup:
+            raise ValueError("warmup_epochs is not supported with the plateau scheduler")
+        return sched.ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=5)
+    if name == "cosine":
+        main = sched.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=cfg["lr"] * 0.01)
+    elif name == "step":
+        main = sched.StepLR(optimizer, step_size=max(1, epochs // 3), gamma=0.1)
+    elif name == "none":
+        main = sched.ConstantLR(optimizer, factor=1.0, total_iters=0)
+    else:
+        raise ValueError(name)
+    if not warmup:
+        return main
+    ramp = sched.LinearLR(optimizer, start_factor=1.0 / (warmup + 1), end_factor=1.0, total_iters=warmup)
+    return sched.SequentialLR(optimizer, [ramp, main], milestones=[warmup])
 
 
 def main():
@@ -118,8 +87,8 @@ def main():
                               generator=generator)
     val_loader = DataLoader(val_ds, batch_size=cfg["batch_size"])
 
-    model = build_model(cfg["model"], cfg["encoder"], cfg["encoder_weights"]).to(device)
-    loss_fn = LOSSES[cfg["loss"]]
+    model = build_model(cfg).to(device)
+    loss_fn = build_loss(cfg)
     optimizer = build_optimizer(cfg, model)
     scheduler = build_scheduler(cfg, optimizer)
     use_amp = device.type == "cuda"
@@ -127,10 +96,7 @@ def main():
     print(f"Run {cfg['name']} | device={device} | params={count_params(model) / 1e6:.1f}M | "
           f"train={len(train_ds)} val={len(val_ds)}")
 
-    wandb_run = None
-    if cfg["wandb"]:
-        import wandb
-        wandb_run = wandb.init(project="polyp-segmentation", name=cfg["name"], config=cfg)
+    tracker = Tracker(cfg)
 
     fields = ["epoch", "lr", "train_loss", "val_loss", "val_dice", "val_iou", "val_precision",
               "val_recall", "seconds"]
@@ -158,15 +124,14 @@ def main():
         lr = optimizer.param_groups[0]["lr"]
         if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
             scheduler.step(val["dice"])
-        elif scheduler is not None:
+        else:
             scheduler.step()
 
         row = {"epoch": epoch, "lr": lr, "train_loss": total / seen, "val_loss": val["loss"],
                "seconds": time.time() - start, **{f"val_{k}": val[k] for k in ("dice", "iou", "precision", "recall")}}
         writer.writerow({k: (f"{v:.6g}" if isinstance(v, float) else v) for k, v in row.items()})
         log_file.flush()
-        if wandb_run:
-            wandb_run.log(row)
+        tracker.log_epoch(row)
 
         mark = ""
         if val["dice"] > best_dice:
@@ -183,9 +148,8 @@ def main():
     plot_curves([run_dir], run_dir / "curves.png")
     test = evaluate_run(run_dir, device=device)
     print("Test:", {k: round(v, 4) for k, v in test["mean"].items()})
-    if wandb_run:
-        wandb_run.summary.update({f"test_{k}": v for k, v in test["mean"].items()})
-        wandb_run.finish()
+    tracker.log_test(test, run_dir)
+    tracker.finish()
 
 
 if __name__ == "__main__":

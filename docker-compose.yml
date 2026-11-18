@@ -1,0 +1,51 @@
+# docker compose up -d --build                      demo + API on http://localhost:7860
+# docker compose --profile monitoring up -d         + Prometheus :9090 and Grafana :3000 (dashboard "Polyp segmentation")
+# docker compose --profile tracking up -d mlflow    MLflow tracking server :5000
+#     then: MLFLOW_TRACKING_URI=http://localhost:5000 python scripts/log_to_mlflow.py --release checkpoints
+services:
+  app:
+    build: .
+    image: polyp-seg:latest
+    ports: ["7860:7860"]
+    environment:
+      PREDICTION_LOG: /logs/predictions.jsonl   # one summary line per prediction, no images
+    volumes:
+      - ./logs:/logs
+    restart: unless-stopped
+
+  prometheus:
+    profiles: ["monitoring"]
+    image: prom/prometheus:v3.4.1
+    ports: ["9090:9090"]
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on: [app]
+
+  grafana:
+    profiles: ["monitoring"]
+    image: grafana/grafana:12.0.2
+    ports: ["3000:3000"]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/polyp.json
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on: [prometheus]
+
+  mlflow:
+    profiles: ["tracking"]
+    image: ghcr.io/mlflow/mlflow:v3.18.0
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+    ports: ["5000:5000"]
+    volumes:
+      - mlflow-data:/mlflow
+
+volumes:
+  prometheus-data:
+  mlflow-data:

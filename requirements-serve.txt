@@ -1,0 +1,15 @@
+# Inference image only, pinned to the versions the release was tested with.
+# torch and torchvision are installed separately from the CPU wheel index (see Dockerfile).
+segmentation-models-pytorch==0.6.0
+timm==1.0.31
+albumentations==2.0.8
+opencv-python-headless==5.0.0.93
+numpy==2.5.4
+pandas==3.1.1
+pillow==13.0.0
+pyyaml==6.0.3
+gradio==6.32.0
+fastapi==0.162.7
+uvicorn==0.54.0
+python-multipart==0.0.33
+prometheus-client==0.26.0

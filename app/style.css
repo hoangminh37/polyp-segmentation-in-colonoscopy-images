@@ -1,0 +1,82 @@
+/* Uses Gradio theme variables, so light and dark mode both work. */
+.gradio-container { max-width: 1320px !important; margin: 0 auto !important; }
+.mono { font-family: var(--font-mono); }
+
+/* header */
+.app-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px;
+  flex-wrap: wrap; padding: 8px 2px 14px; border-bottom: 1px solid var(--border-color-primary); }
+.app-header h1 { font-size: 1.55rem; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 6px; }
+.app-header p { margin: 0; max-width: 760px; color: var(--body-text-color-subdued); line-height: 1.5; }
+.app-header .release { font-size: 0.78rem; color: var(--body-text-color-subdued); white-space: nowrap; }
+.disclaimer { margin: 12px 0 4px; padding: 8px 12px; font-size: 0.84rem; line-height: 1.45;
+  color: var(--body-text-color-subdued); border-left: 3px solid var(--color-accent);
+  background: var(--background-fill-secondary); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+
+/* model description under the dropdown */
+.model-note { font-size: 0.82rem; color: var(--body-text-color-subdued); margin: -4px 2px 2px; }
+
+/* view switch: compact segmented control */
+.view-switch { padding: 0 !important; background: none !important; border: none !important; }
+.view-switch .wrap { gap: 6px !important; }
+.view-switch label { padding: 5px 12px !important; font-size: 0.85rem !important; }
+
+/* legend under the result image */
+.legend { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; font-size: 0.82rem;
+  color: var(--body-text-color-subdued); padding: 2px 2px 0; }
+.legend .swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; margin-left: 6px; }
+.legend .swatch:first-child { margin-left: 0; }
+.legend .swatch.outline { background: none; border: 2px solid var(--body-text-color-subdued); }
+.legend .ramp { width: 120px; height: 10px; border-radius: 2px; display: inline-block; }
+.legend .ramp-ends { font-family: var(--font-mono); font-size: 0.75rem; }
+.legend .ramp + .ramp-ends { order: -1; }
+.ramp-viridis { background: linear-gradient(90deg, #440154, #3b528b, #21918c, #5ec962, #fde725); }
+.ramp-magma { background: linear-gradient(90deg, #000004, #3b0f70, #8c2981, #de4968, #fe9f6d, #fcfdbf); }
+
+/* metric tiles */
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.tile { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--radius-md);
+  border: 1px solid var(--border-color-primary); background: var(--block-background-fill); }
+.tile-label { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--body-text-color-subdued); }
+.tile-value { font-size: 1.35rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tile-note { font-size: 0.75rem; color: var(--body-text-color-subdued); }
+.tiles-gt .tile { border-left: 3px solid var(--color-accent); }
+.section-label { margin: 14px 2px 6px; font-size: 0.8rem; font-weight: 600; }
+.section-label span { font-weight: 400; color: var(--body-text-color-subdued); }
+.empty { padding: 18px; text-align: center; color: var(--body-text-color-subdued); font-size: 0.9rem;
+  border: 1px dashed var(--border-color-primary); border-radius: var(--radius-md); }
+@media (max-width: 640px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* notices */
+.notice { border-radius: var(--radius-sm); padding: 8px 12px; font-size: 0.85rem; line-height: 1.45; }
+.notice ul { margin: 0; padding-left: 18px; }
+.notice-warn { background: rgba(235, 161, 0, 0.12); border: 1px solid rgba(235, 161, 0, 0.45); }
+.notice-info { background: var(--background-fill-secondary); border: 1px solid var(--border-color-primary); }
+.notice + .notice { margin-top: 6px; }
+
+/* models tab */
+.table-wrap { overflow-x: auto; }
+table.models { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+table.models { border: none !important; }
+table.models th, table.models td { padding: 8px 10px; border: none !important;
+  border-bottom: 1px solid var(--border-color-primary) !important; text-align: left; white-space: nowrap;
+  background: none !important; }
+table.models th { font-weight: 600; font-size: 0.78rem; color: var(--body-text-color-subdued); }
+table.models .num { text-align: right; font-variant-numeric: tabular-nums; }
+table.models td.mono { font-family: var(--font-mono); font-size: 0.8rem; color: var(--body-text-color-subdued); }
+table.models tr.best td:first-child { font-weight: 600; }
+table.models tr.ensemble td { color: var(--body-text-color-subdued); }
+.prose { max-width: 860px; line-height: 1.55; }
+.intro { color: var(--body-text-color-subdued); }
+
+.footer { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--border-color-primary);
+  font-size: 0.78rem; color: var(--body-text-color-subdued); }
+
+/* gr.HTML limits its width like prose; header and footer span the page */
+.full-width, .full-width > *, .full-width .prose, .full-width .html-container { max-width: none !important; width: 100%; }
+
+/* example picker: compact thumbnails with the label underneath */
+.example-picker .grid-wrap { padding: 6px !important; }
+.example-picker .caption-label { font-size: 0.74rem !important; }
+.example-note { font-size: 0.82rem; color: var(--body-text-color-subdued); margin: -2px 2px 0; }
+.example-note b { color: var(--body-text-color); font-weight: 600; }

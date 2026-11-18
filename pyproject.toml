@@ -1,0 +1,21 @@
+[project]
+name = "polyp-segmentation"
+version = "1.0.0"
+description = "Polyp segmentation in colonoscopy images (Kvasir-SEG): training, evaluation and serving"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["runs", "runs_archive", "data", "mlruns"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]
+ignore = ["E501", "B905"]  # long lines are allowed where splitting hurts readability (tables, f-strings); zip() without strict= is fine here
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning", "ignore::UserWarning"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.File", "fastapi.Query"]  # FastAPI declares parameters this way
